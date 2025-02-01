@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>なると風ゲーム</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff; /* 背景は白 */
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      background-color: #ffffff; /* キャンバス背景は白 */
+      border: 2px solid #000000; /* 境界線は黒 */
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // 色の設定
+    const BG_COLOR = "#ffffff";   // 背景は白
+    const LINE_COLOR = "#ff0000"; // 線は赤
+    const TEXT_COLOR = "#000000"; // 文字は黒
+
+    // ゲームパラメータ
+    const SPEED = 200; // ピクセル/秒
+    const TURN_RATE = Math.PI * 2; // 1秒あたり360度 (2πラジアン)
+    const COLLISION_RADIUS = 4; // 衝突判定の閾値（ピクセル）
+    
+    // 初期状態
+    let posX = WIDTH / 2;
+    let posY = HEIGHT / 2;
+    let angle = 0; // 初期角度（右方向）
+    let path = [{ x: posX, y: posY }]; // 通過点リスト
+    let totalTime = 0; // 経過時間（スコアとして使用）
+    let gameOver = false;
+
+    // キー入力状態の管理（スペースキーのみ管理）
+    const keys = {
+      Space: false
+    };
+
+    window.addEventListener("keydown", function(e) {
+      // スペースキーのみ反応させる
+      if(e.code === "Space") {
+        keys.Space = true;
+      }
+      // ゲームオーバー時は任意のキーでリスタート
+      if(gameOver) {
+        restartGame();
+      }
+    });
+
+    window.addEventListener("keyup", function(e) {
+      if(e.code === "Space") {
+        keys.Space = false;
+      }
+    });
+
+    let lastTime = performance.now();
+
+    function gameLoop(timestamp) {
+      const dt = (timestamp - lastTime) / 1000; // 秒に換算
+      lastTime = timestamp;
+
+      if (!gameOver) {
+        // 経過時間更新
+        totalTime += dt;
+
+        // ユーザー入力による回転（スペースキーのみ有効：スペースキーで右回転）
+        let turnInput = 0;
+        if(keys.Space) turnInput -= 1; // スペースキーで負の回転
+        // 他のキーは無視
+
+        angle += turnInput * TURN_RATE * dt;
+
+        // 位置更新
+        posX += Math.cos(angle) * SPEED * dt;
+        posY += Math.sin(angle) * SPEED * dt;
+
+        // 新たな点を保存
+        const newPoint = { x: Math.round(posX), y: Math.round(posY) };
+        path.push(newPoint);
+
+        // 自己交差判定：直近10点は除外
+        for(let i = 0; i < path.length - 10; i++){
+          const p = path[i];
+          const dx = newPoint.x - p.x;
+          const dy = newPoint.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if(dist < COLLISION_RADIUS) {
+            gameOver = true;
+            break;
+          }
+        }
+        // 画面外判定
+        if(posX < 0 || posX > WIDTH || posY < 0 || posY > HEIGHT){
+          gameOver = true;
+        }
+      }
+
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+      // キャンバスをクリア
+      ctx.fillStyle = BG_COLOR;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // 線の描画
+      if(path.length > 1){
+        ctx.strokeStyle = LINE_COLOR;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for(let i = 1; i < path.length; i++){
+          ctx.lineTo(path[i].x, path[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // テキスト描画
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.font = "24px sans-serif";
+      if(gameOver) {
+        // ゲームオーバー時は中央にGAME OVERと固定スコアを表示
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2);
+        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", WIDTH / 2, HEIGHT / 2 + 40);
+        ctx.font = "16px sans-serif";
+        ctx.fillText("Press any key to restart", WIDTH / 2, HEIGHT / 2 + 70);
+      } else {
+        // プレイ中は画面右上にスコア（経過時間）を表示
+        ctx.textAlign = "left";
+        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", 10, 30);
+      }
+    }
+
+    function restartGame() {
+      // 変数の初期化
+      posX = WIDTH / 2;
+      posY = HEIGHT / 2;
+      angle = 0;
+      path = [{ x: posX, y: posY }];
+      totalTime = 0;
+      gameOver = false;
+    }
+
+    // ゲームループ開始
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
