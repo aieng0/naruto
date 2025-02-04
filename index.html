@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- ビューポート設定（スマホ向け） -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>なると風ゲーム（正方形プレイ画面・速度80）</title>
+  <title>なると風ゲーム（正方形プレイ画面・速度60）</title>
   <style>
     /* 全体レイアウト：スマホの縦長画面に中央寄せ */
     html, body {
@@ -28,9 +28,8 @@
     #gameCanvas {
       background-color: #ffffff;
       border: 2px solid #000000;
-      /* コンテナの横幅に合わせる */
       width: 100%;
-      /* アスペクト比を固定（正方形）にするため、高さも同じに */
+      /* アスペクト比を固定（正方形）にする */
       aspect-ratio: 1 / 1;
     }
     /* アクションボタン（スタート／左旋回兼用）の設定 */
@@ -63,7 +62,6 @@
     // キャンバスとコンテキストの取得
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    // キャンバスの実サイズは固定値
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
 
@@ -74,8 +72,8 @@
     const BUTTON_BG_COLOR = "#28a745";  // アクションボタンの背景色
 
     // ゲームパラメータ
-    // SPEED を 80 に変更
-    const SPEED = 80;           // ピクセル/秒
+    // SPEED を 60 に変更
+    const SPEED = 60;           // ピクセル/秒
     const TURN_RATE = Math.PI * 2; // 1秒あたり360度
     const COLLISION_RADIUS = 4;  // 衝突判定の閾値（ピクセル）
 
