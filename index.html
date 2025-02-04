@@ -2,8 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>なると風ゲーム（固定時間ステップ更新）</title>
+  <!-- ビューポート設定（スマホ向け） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>なると風ゲーム（正方形プレイ画面）</title>
   <style>
+    /* 全体レイアウト：スマホの縦長画面に中央寄せ */
     html, body {
       margin: 0;
       padding: 0;
@@ -13,27 +16,35 @@
       justify-content: center;
       align-items: center;
     }
-    /* コンテナでキャンバスとボタンを縦に配置 */
+    /* コンテナ：キャンバスとボタンを縦に配置 */
     #container {
       display: flex;
       flex-direction: column;
       align-items: center;
+      width: 100%;
+      max-width: 400px;
     }
-    /* プレイ画面（キャンバス） */
+    /* キャンバス（正方形プレイ画面）の設定 */
     #gameCanvas {
       background-color: #ffffff;
       border: 2px solid #000000;
+      /* コンテナの横幅に合わせる */
+      width: 100%;
+      /* アスペクト比を固定（正方形）にするため、高さも同じに */
+      aspect-ratio: 1 / 1;
     }
-    /* アクションボタン（スタート／右旋回兼用） */
+    /* アクションボタン（スタート／左旋回兼用）の設定 */
     #actionButton {
-      margin-top: 5px;  /* キャンバスとの間隔を5px */
+      margin-top: 5px;   /* キャンバスとの間隔を5px */
       padding: 15px 30px;
-      font-size: 18px;
+      font-size: 20px;
       background-color: #28a745;
       color: #ffffff;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      width: 100%;
+      max-width: 400px;
     }
     #actionButton:active {
       opacity: 0.8;
@@ -42,8 +53,9 @@
 </head>
 <body>
   <div id="container">
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <!-- この1つのボタンが「スタート」と「右旋回」の両役割を兼用 -->
+    <!-- 正方形プレイ画面：実サイズは360×360 -->
+    <canvas id="gameCanvas" width="360" height="360"></canvas>
+    <!-- この1つのボタンが「スタート」と「左旋回」の両役割を兼用 -->
     <button id="actionButton">スタート</button>
   </div>
 
@@ -51,6 +63,7 @@
     // キャンバスとコンテキストの取得
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    // キャンバスの実サイズは固定値
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
 
@@ -61,17 +74,17 @@
     const BUTTON_BG_COLOR = "#28a745";  // アクションボタンの背景色
 
     // ゲームパラメータ
-    const SPEED = 200;          // ピクセル/秒
+    const SPEED = 200;           // ピクセル/秒
     const TURN_RATE = Math.PI * 2; // 1秒あたり360度
-    const COLLISION_RADIUS = 4; // 衝突判定の閾値（ピクセル）
+    const COLLISION_RADIUS = 4;  // 衝突判定の閾値（ピクセル）
 
-    // 固定時間ステップ（シミュレーション更新の間隔：120fps 相当）
+    // 固定時間ステップ（シミュレーション更新の間隔：120fps相当）
     const fixedDeltaTime = 1 / 120;
 
     // ゲーム状態
     let posX, posY, angle, path, totalTime, gameOver;
     let gameStarted = false;
-    // 右旋回の入力状態（ここではスペースキーと同等の動作）
+    // 入力状態（ここでは左旋回ボタンの押下状態）
     const keys = { Space: false };
 
     // 状態初期化（再スタート時に呼び出す）
@@ -91,7 +104,7 @@
       restartGame();
     }
 
-    // 右旋回開始／停止（ゲームプレイ中の操作）
+    // 左旋回開始／停止（ゲームプレイ中の操作）
     function startTurning() {
       keys.Space = true;
     }
@@ -99,7 +112,7 @@
       keys.Space = false;
     }
 
-    // アクションボタンの操作（スタート／右旋回兼用）
+    // アクションボタンの操作（スタート／左旋回兼用）
     const actionButton = document.getElementById("actionButton");
 
     // タッチ／マウスの「押し始め」
@@ -141,8 +154,8 @@
 
     // シミュレーション更新処理（固定時間ステップで呼び出す）
     function update(dt) {
-      // dt は fixedDeltaTime（例：1/120秒）
       totalTime += dt;
+      // ゲームプレイ中、アクションボタンが押されている場合は左旋回（turnInput = -1）
       let turnInput = keys.Space ? -1 : 0;
       angle += turnInput * TURN_RATE * dt;
       posX += Math.cos(angle) * SPEED * dt;
@@ -167,11 +180,9 @@
 
     // 描画処理
     function draw() {
-      // キャンバスのクリア
       ctx.fillStyle = BG_COLOR;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // 軌跡の描画
       if (gameStarted && path && path.length > 1) {
         ctx.strokeStyle = LINE_COLOR;
         ctx.lineWidth = 2;
@@ -184,7 +195,6 @@
       }
 
       if (!gameStarted) {
-        // ゲーム未開始時の説明メッセージ（キャンバス下部、ボタンより上側）
         const msg = "下のボタンを押してゲーム開始";
         ctx.font = "24px sans-serif";
         ctx.textAlign = "center";
@@ -192,7 +202,7 @@
         const paddingX = 10, paddingY = 10;
         const rectWidth = metrics.width + paddingX * 2;
         const rectHeight = 24 + paddingY * 2;
-        // キャンバス下部から100px上に配置（例）
+        // キャンバス下部から100px上に配置（必要に応じて調整）
         const rectY = HEIGHT - 100;
         const rectX = (WIDTH - rectWidth) / 2;
         ctx.fillStyle = BUTTON_BG_COLOR;
@@ -200,7 +210,6 @@
         ctx.fillStyle = "#ffffff";
         ctx.fillText(msg, WIDTH / 2, rectY + paddingY + 24 * 0.8);
       } else if (gameOver) {
-        // ゲームオーバー時の表示
         ctx.font = "32px sans-serif";
         ctx.textAlign = "center";
         ctx.fillStyle = TEXT_COLOR;
@@ -208,7 +217,6 @@
         ctx.font = "24px sans-serif";
         ctx.fillText("Time: " + totalTime.toFixed(2) + "s", WIDTH / 2, HEIGHT / 2 + 40);
       } else {
-        // ゲームプレイ中は右上にスコア表示
         ctx.font = "24px sans-serif";
         ctx.textAlign = "left";
         ctx.fillStyle = TEXT_COLOR;
@@ -216,22 +224,19 @@
       }
     }
 
-    // 固定時間ステップ更新用のループ
+    // 固定時間ステップ更新用ループ
     let lastTime = performance.now();
     let accumulator = 0;
     function gameLoop(timestamp) {
       let dt = (timestamp - lastTime) / 1000;
       lastTime = timestamp;
       accumulator += dt;
-
-      // accumulator が固定ステップ以上あれば、その間隔で update() を呼び出す
       while (accumulator >= fixedDeltaTime) {
         if (gameStarted && !gameOver) {
           update(fixedDeltaTime);
         }
         accumulator -= fixedDeltaTime;
       }
-
       draw();
       updateActionButton();
       requestAnimationFrame(gameLoop);
