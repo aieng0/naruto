@@ -2,164 +2,241 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>なると風ゲーム</title>
+  <title>なると風ゲーム（固定時間ステップ更新）</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      background-color: #ffffff; /* 背景は白 */
-      overflow: hidden;
+      background-color: #ffffff;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
-    canvas {
-      background-color: #ffffff; /* キャンバス背景は白 */
-      border: 2px solid #000000; /* 境界線は黒 */
+    /* コンテナでキャンバスとボタンを縦に配置 */
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* プレイ画面（キャンバス） */
+    #gameCanvas {
+      background-color: #ffffff;
+      border: 2px solid #000000;
+    }
+    /* アクションボタン（スタート／右旋回兼用） */
+    #actionButton {
+      margin-top: 5px;  /* キャンバスとの間隔を5px */
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #28a745;
+      color: #ffffff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #actionButton:active {
+      opacity: 0.8;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <!-- この1つのボタンが「スタート」と「右旋回」の両役割を兼用 -->
+    <button id="actionButton">スタート</button>
+  </div>
 
   <script>
+    // キャンバスとコンテキストの取得
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
 
     // 色の設定
-    const BG_COLOR = "#ffffff";   // 背景は白
-    const LINE_COLOR = "#ff0000"; // 線は赤
-    const TEXT_COLOR = "#000000"; // 文字は黒
+    const BG_COLOR = "#ffffff";
+    const LINE_COLOR = "#ff0000";
+    const TEXT_COLOR = "#000000";
+    const BUTTON_BG_COLOR = "#28a745";  // アクションボタンの背景色
 
     // ゲームパラメータ
-    const SPEED = 200; // ピクセル/秒
-    const TURN_RATE = Math.PI * 2; // 1秒あたり360度 (2πラジアン)
+    const SPEED = 200;          // ピクセル/秒
+    const TURN_RATE = Math.PI * 2; // 1秒あたり360度
     const COLLISION_RADIUS = 4; // 衝突判定の閾値（ピクセル）
-    
-    // 初期状態
-    let posX = WIDTH / 2;
-    let posY = HEIGHT / 2;
-    let angle = 0; // 初期角度（右方向）
-    let path = [{ x: posX, y: posY }]; // 通過点リスト
-    let totalTime = 0; // 経過時間（スコアとして使用）
-    let gameOver = false;
 
-    // キー入力状態の管理（スペースキーのみ管理）
-    const keys = {
-      Space: false
-    };
+    // 固定時間ステップ（シミュレーション更新の間隔：120fps 相当）
+    const fixedDeltaTime = 1 / 120;
 
-    window.addEventListener("keydown", function(e) {
-      // スペースキーのみ反応させる
-      if(e.code === "Space") {
-        keys.Space = true;
-      }
-      // ゲームオーバー時は任意のキーでリスタート
-      if(gameOver) {
-        restartGame();
-      }
-    });
+    // ゲーム状態
+    let posX, posY, angle, path, totalTime, gameOver;
+    let gameStarted = false;
+    // 右旋回の入力状態（ここではスペースキーと同等の動作）
+    const keys = { Space: false };
 
-    window.addEventListener("keyup", function(e) {
-      if(e.code === "Space") {
-        keys.Space = false;
-      }
-    });
-
-    let lastTime = performance.now();
-
-    function gameLoop(timestamp) {
-      const dt = (timestamp - lastTime) / 1000; // 秒に換算
-      lastTime = timestamp;
-
-      if (!gameOver) {
-        // 経過時間更新
-        totalTime += dt;
-
-        // ユーザー入力による回転（スペースキーのみ有効：スペースキーで右回転）
-        let turnInput = 0;
-        if(keys.Space) turnInput -= 1; // スペースキーで負の回転
-        // 他のキーは無視
-
-        angle += turnInput * TURN_RATE * dt;
-
-        // 位置更新
-        posX += Math.cos(angle) * SPEED * dt;
-        posY += Math.sin(angle) * SPEED * dt;
-
-        // 新たな点を保存
-        const newPoint = { x: Math.round(posX), y: Math.round(posY) };
-        path.push(newPoint);
-
-        // 自己交差判定：直近10点は除外
-        for(let i = 0; i < path.length - 10; i++){
-          const p = path[i];
-          const dx = newPoint.x - p.x;
-          const dy = newPoint.y - p.y;
-          const dist = Math.hypot(dx, dy);
-          if(dist < COLLISION_RADIUS) {
-            gameOver = true;
-            break;
-          }
-        }
-        // 画面外判定
-        if(posX < 0 || posX > WIDTH || posY < 0 || posY > HEIGHT){
-          gameOver = true;
-        }
-      }
-
-      draw();
-      requestAnimationFrame(gameLoop);
-    }
-
-    function draw() {
-      // キャンバスをクリア
-      ctx.fillStyle = BG_COLOR;
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-      // 線の描画
-      if(path.length > 1){
-        ctx.strokeStyle = LINE_COLOR;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for(let i = 1; i < path.length; i++){
-          ctx.lineTo(path[i].x, path[i].y);
-        }
-        ctx.stroke();
-      }
-
-      // テキスト描画
-      ctx.fillStyle = TEXT_COLOR;
-      ctx.font = "24px sans-serif";
-      if(gameOver) {
-        // ゲームオーバー時は中央にGAME OVERと固定スコアを表示
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2);
-        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", WIDTH / 2, HEIGHT / 2 + 40);
-        ctx.font = "16px sans-serif";
-        ctx.fillText("Press any key to restart", WIDTH / 2, HEIGHT / 2 + 70);
-      } else {
-        // プレイ中は画面右上にスコア（経過時間）を表示
-        ctx.textAlign = "left";
-        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", 10, 30);
-      }
-    }
-
+    // 状態初期化（再スタート時に呼び出す）
     function restartGame() {
-      // 変数の初期化
       posX = WIDTH / 2;
       posY = HEIGHT / 2;
       angle = 0;
       path = [{ x: posX, y: posY }];
       totalTime = 0;
       gameOver = false;
+      keys.Space = false;
     }
 
-    // ゲームループ開始
+    // ゲーム開始／再スタート処理
+    function startGame() {
+      gameStarted = true;
+      restartGame();
+    }
+
+    // 右旋回開始／停止（ゲームプレイ中の操作）
+    function startTurning() {
+      keys.Space = true;
+    }
+    function stopTurning() {
+      keys.Space = false;
+    }
+
+    // アクションボタンの操作（スタート／右旋回兼用）
+    const actionButton = document.getElementById("actionButton");
+
+    // タッチ／マウスの「押し始め」
+    actionButton.addEventListener("mousedown", handleActionStart);
+    actionButton.addEventListener("touchstart", handleActionStart);
+    // タッチ／マウスの「押し終わり」
+    actionButton.addEventListener("mouseup", handleActionEnd);
+    actionButton.addEventListener("mouseleave", handleActionEnd);
+    actionButton.addEventListener("touchend", handleActionEnd);
+
+    function handleActionStart(e) {
+      e.preventDefault();
+      // ゲーム未開始またはゲームオーバーの場合はボタンでゲーム開始
+      if (!gameStarted || gameOver) {
+        startGame();
+      } else {
+        // ゲームプレイ中は、押し続けると左旋回（入力状態を true）
+        startTurning();
+      }
+    }
+
+    function handleActionEnd(e) {
+      e.preventDefault();
+      if (gameStarted && !gameOver) {
+        stopTurning();
+      }
+    }
+
+    // 毎フレームごとにボタンのラベルを更新
+    function updateActionButton() {
+      if (!gameStarted || gameOver) {
+        actionButton.textContent = "スタート";
+        actionButton.style.backgroundColor = BUTTON_BG_COLOR;
+      } else {
+        actionButton.textContent = "左旋回";
+        actionButton.style.backgroundColor = BUTTON_BG_COLOR;
+      }
+    }
+
+    // シミュレーション更新処理（固定時間ステップで呼び出す）
+    function update(dt) {
+      // dt は fixedDeltaTime（例：1/120秒）
+      totalTime += dt;
+      let turnInput = keys.Space ? -1 : 0;
+      angle += turnInput * TURN_RATE * dt;
+      posX += Math.cos(angle) * SPEED * dt;
+      posY += Math.sin(angle) * SPEED * dt;
+
+      const newPoint = { x: Math.round(posX), y: Math.round(posY) };
+      path.push(newPoint);
+
+      // 自己交差判定（直近10点は除外）
+      for (let i = 0; i < path.length - 10; i++) {
+        const p = path[i];
+        if (Math.hypot(newPoint.x - p.x, newPoint.y - p.y) < COLLISION_RADIUS) {
+          gameOver = true;
+          break;
+        }
+      }
+      // 画面外判定
+      if (posX < 0 || posX > WIDTH || posY < 0 || posY > HEIGHT) {
+        gameOver = true;
+      }
+    }
+
+    // 描画処理
+    function draw() {
+      // キャンバスのクリア
+      ctx.fillStyle = BG_COLOR;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // 軌跡の描画
+      if (gameStarted && path && path.length > 1) {
+        ctx.strokeStyle = LINE_COLOR;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+          ctx.lineTo(path[i].x, path[i].y);
+        }
+        ctx.stroke();
+      }
+
+      if (!gameStarted) {
+        // ゲーム未開始時の説明メッセージ（キャンバス下部、ボタンより上側）
+        const msg = "下のボタンを押してゲーム開始";
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "center";
+        const metrics = ctx.measureText(msg);
+        const paddingX = 10, paddingY = 10;
+        const rectWidth = metrics.width + paddingX * 2;
+        const rectHeight = 24 + paddingY * 2;
+        // キャンバス下部から100px上に配置（例）
+        const rectY = HEIGHT - 100;
+        const rectX = (WIDTH - rectWidth) / 2;
+        ctx.fillStyle = BUTTON_BG_COLOR;
+        ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(msg, WIDTH / 2, rectY + paddingY + 24 * 0.8);
+      } else if (gameOver) {
+        // ゲームオーバー時の表示
+        ctx.font = "32px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = TEXT_COLOR;
+        ctx.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2);
+        ctx.font = "24px sans-serif";
+        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", WIDTH / 2, HEIGHT / 2 + 40);
+      } else {
+        // ゲームプレイ中は右上にスコア表示
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = TEXT_COLOR;
+        ctx.fillText("Time: " + totalTime.toFixed(2) + "s", 10, 30);
+      }
+    }
+
+    // 固定時間ステップ更新用のループ
+    let lastTime = performance.now();
+    let accumulator = 0;
+    function gameLoop(timestamp) {
+      let dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      accumulator += dt;
+
+      // accumulator が固定ステップ以上あれば、その間隔で update() を呼び出す
+      while (accumulator >= fixedDeltaTime) {
+        if (gameStarted && !gameOver) {
+          update(fixedDeltaTime);
+        }
+        accumulator -= fixedDeltaTime;
+      }
+
+      draw();
+      updateActionButton();
+      requestAnimationFrame(gameLoop);
+    }
+
     requestAnimationFrame(gameLoop);
   </script>
 </body>
