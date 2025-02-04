@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- ビューポート設定（スマホ向け） -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>なると風ゲーム（正方形プレイ画面）</title>
+  <title>なると風ゲーム（正方形プレイ画面・速度調整済）</title>
   <style>
     /* 全体レイアウト：スマホの縦長画面に中央寄せ */
     html, body {
@@ -74,7 +74,8 @@
     const BUTTON_BG_COLOR = "#28a745";  // アクションボタンの背景色
 
     // ゲームパラメータ
-    const SPEED = 200;           // ピクセル/秒
+    // SPEED を 200 から 0.6 倍の 120 に変更
+    const SPEED = 120;           // ピクセル/秒（0.6倍に調整）
     const TURN_RATE = Math.PI * 2; // 1秒あたり360度
     const COLLISION_RADIUS = 4;  // 衝突判定の閾値（ピクセル）
 
@@ -202,7 +203,6 @@
         const paddingX = 10, paddingY = 10;
         const rectWidth = metrics.width + paddingX * 2;
         const rectHeight = 24 + paddingY * 2;
-        // キャンバス下部から100px上に配置（必要に応じて調整）
         const rectY = HEIGHT - 100;
         const rectX = (WIDTH - rectWidth) / 2;
         ctx.fillStyle = BUTTON_BG_COLOR;
